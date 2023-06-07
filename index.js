@@ -11,7 +11,7 @@ app.use(express.json())
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://photostat:FprzsuRcDBRS2bC2@cluster0.mzevrg2.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -23,10 +23,58 @@ const client = new MongoClient(uri, {
   }
 });
 
+const userCollection = client.db('photostatDB').collection('usersDB')
+const courseCollection = client.db('photostatDB').collection('courseDB')
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    //All Get Methods Are Here
+    app.get('/user',async(req,res)=>{
+        const result = await userCollection.find().toArray()
+        res.send(result)
+    })
+
+
+    app.get('/courses',async(req,res)=>{
+        const result = await courseCollection.find().toArray()
+        res.send(result)
+    })
+
+    app.get('/courses/:id',async(req,res)=>{
+        const id = req.params.id
+        const query = {_id :new ObjectId(id)}
+        const result = await courseCollection.findOne(query)
+        res.send(result)
+    })
+
+    //All Post Methods Are Here
+
+    app.post('/courses',async(req,res)=>{
+        const course = req.body;
+        const result = await courseCollection.insertOne(course)
+        res.send(result)
+    })
+
+    //All PUT Methods Are Here
+    app.put('/users/:email',async(req,res)=>{
+        const user = req.body
+        const email = req.params.email
+        const query = {email:email}
+        const options = {upsert:true}
+        const result = await userCollection.updateOne(query,user,options)
+        res.send(result)
+    })
+
+    //All DELETE Methods Are Here
+
+
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Photostat successfully connected to MongoDB!");
