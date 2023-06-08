@@ -64,7 +64,12 @@ async function run() {
       const result = await userCollection.findOne(query)
       res.send(result)
     })
-
+    app.get('/users/:role',async(req,res)=>{
+      const role = req.params.role
+      const query = {role:role}
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
+    })
     //All Post Methods Are Here
 
     app.post('/courses', async (req, res) => {
