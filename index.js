@@ -24,7 +24,7 @@ const client = new MongoClient(uri, {
 });
 
 const userCollection = client.db('photostatDB').collection('usersDB')
-const courseCollection = client.db('photostatDB').collection('courseDB')
+const courseCollection = client.db('photostatDB').collection('coursesDB')
 
 
 async function run() {
@@ -33,40 +33,58 @@ async function run() {
     await client.connect();
 
     //All Get Methods Are Here
-    app.get('/user',async(req,res)=>{
-        const result = await userCollection.find().toArray()
-        res.send(result)
+    app.get('/users', async (req, res) => {
+      const result = await userCollection.find().toArray()
+      res.send(result)
     })
 
 
-    app.get('/courses',async(req,res)=>{
-        const result = await courseCollection.find().toArray()
-        res.send(result)
+    app.get('/courses', async (req, res) => {
+      const result = await courseCollection.find().toArray()
+      res.send(result)
     })
 
-    app.get('/courses/:id',async(req,res)=>{
-        const id = req.params.id
-        const query = {_id :new ObjectId(id)}
-        const result = await courseCollection.findOne(query)
-        res.send(result)
+    app.get('/courses/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await courseCollection.findOne(query)
+      res.send(result)
+    })
+
+    app.get('/instractor/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {email:email}
+      const result = await courseCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    app.get('/user/role/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {email: email}
+      const result = await userCollection.findOne(query)
+      res.send(result)
     })
 
     //All Post Methods Are Here
 
-    app.post('/courses',async(req,res)=>{
-        const course = req.body;
-        const result = await courseCollection.insertOne(course)
-        res.send(result)
+    app.post('/courses', async (req, res) => {
+      const course = req.body;
+      const result = await courseCollection.insertOne(course)
+      res.send(result)
     })
 
     //All PUT Methods Are Here
-    app.put('/users/:email',async(req,res)=>{
-        const user = req.body
-        const email = req.params.email
-        const query = {email:email}
-        const options = {upsert:true}
-        const result = await userCollection.updateOne(query,user,options)
-        res.send(result)
+    app.put('/users/:email', async (req, res) => {
+      const email = req.params.email
+      const user = req.body;
+      const query = { email: email }
+      const options = { upsert: true }
+      const update = {
+        $set: user
+      }
+
+      const result = await userCollection.updateOne(query, update, options)
+      res.send(result)
     })
 
     //All DELETE Methods Are Here
@@ -80,7 +98,7 @@ async function run() {
     console.log("Photostat successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-   // await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
@@ -90,11 +108,11 @@ run().catch(console.dir);
 
 
 
-app.get('/',(req,res)=>{
-    res.send('Photostat is running')
+app.get('/', (req, res) => {
+  res.send('Photostat is running')
 })
 
-app.listen(port,()=>{
-    console.log(`photostat in running on port ${port}`)
+app.listen(port, () => {
+  console.log(`photostat in running on port ${port}`)
 })
 
