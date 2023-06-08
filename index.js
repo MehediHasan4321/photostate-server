@@ -87,14 +87,31 @@ async function run() {
       const update = {
         $set: user
       }
-
       const result = await userCollection.updateOne(query, update, options)
+      res.send(result)
+    })
+
+
+    app.put('/courses/:id',async(req,res)=>{
+      const id = req.params.id
+      const course = req.body;
+      const query = {_id:id}
+      const options = {upsert:true};
+      const updateCourse  = {
+        $set:course
+      }
+      const result = courseCollection.updateOne(query,updateCourse,options)
       res.send(result)
     })
 
     //All DELETE Methods Are Here
 
-
+    app.delete('/courses/:id',async(req,res)=>{
+      const id = req.params.id
+      const query = {_id:id}
+      const result = courseCollection.deleteOne(query)
+      res.send(result)
+    })
 
 
 
