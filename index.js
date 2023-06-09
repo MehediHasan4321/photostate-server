@@ -25,7 +25,7 @@ const client = new MongoClient(uri, {
 
 const userCollection = client.db('photostatDB').collection('usersDB')
 const courseCollection = client.db('photostatDB').collection('coursesDB')
-
+const courseOrderCollection = client.db('photostatDB').collection('courseOrders')
 
 async function run() {
   try {
@@ -51,23 +51,36 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/instractor/:email',async(req,res)=>{
+    app.get('/instractor/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email:email}
+      const query = { email: email }
       const result = await courseCollection.find(query).toArray()
       res.send(result)
     })
 
-    app.get('/user/role/:email',async(req,res)=>{
+    app.get('/user/role/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email}
+      const query = { email: email }
       const result = await userCollection.findOne(query)
       res.send(result)
     })
-    app.get('/users/:role',async(req,res)=>{
+    app.get('/users/:role', async (req, res) => {
       const role = req.params.role
-      const query = {role:role}
+      const query = { role: role }
       const result = await userCollection.find(query).toArray()
+      res.send(result)
+    })
+    app.get('/courseOrder', async (req, res) => {
+      const status = req.query.status
+      const query = { status: status }
+      const result = await courseOrderCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.get('/courseOrder/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { studentEmail: email }
+      const result = await courseOrderCollection.find(query).toArray()
       res.send(result)
     })
     //All Post Methods Are Here
@@ -75,6 +88,13 @@ async function run() {
     app.post('/courses', async (req, res) => {
       const course = req.body;
       const result = await courseCollection.insertOne(course)
+      res.send(result)
+    })
+
+    app.post('/courseOrder', async (req, res) => {
+      const order = req.body;
+      const result = await courseOrderCollection.insertOne(order)
+
       res.send(result)
     })
 
@@ -92,24 +112,24 @@ async function run() {
     })
 
 
-    app.put('/courses/:id',async(req,res)=>{
+    app.put('/courses/:id', async (req, res) => {
       const id = req.params.id
       const course = req.body;
-      const query = {_id:id}
-      const options = {upsert:true};
-      const updateCourse  = {
-        $set:course
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const updateCourse = {
+        $set: course
       }
-      const result = courseCollection.updateOne(query,updateCourse,options)
+      const result = await courseCollection.updateOne(query, updateCourse, options)
       res.send(result)
     })
 
     //All DELETE Methods Are Here
 
-    app.delete('/courses/:id',async(req,res)=>{
+    app.delete('/courses/:id', async (req, res) => {
       const id = req.params.id
-      const query = {_id:id}
-      const result = courseCollection.deleteOne(query)
+      const query = { _id: new ObjectId(id) }
+      const result = await courseCollection.deleteOne(query)
       res.send(result)
     })
 
