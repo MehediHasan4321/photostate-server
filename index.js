@@ -32,13 +32,15 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    //All Get Methods Are Here
+   // All Get Methods Are Here
+    
+
     app.get('/users', async (req, res) => {
       const result = await userCollection.find().toArray()
       res.send(result)
     })
 
-
+    
     app.get('/courses', async (req, res) => {
       const result = await courseCollection.find().toArray()
       res.send(result)
@@ -51,13 +53,18 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/instractor/:email', async (req, res) => {
+    app.get('/instractorCourse/:email', async (req, res) => {
       const email = req.params.email;
       const query = { email: email }
       const result = await courseCollection.find(query).toArray()
       res.send(result)
     })
-
+    app.get('/instractor/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {email : email}
+      const result  = await userCollection.findOne(query)
+      res.send(result)
+    })
     app.get('/user/role/:email', async (req, res) => {
       const email = req.params.email;
       const query = { email: email }
@@ -70,6 +77,13 @@ async function run() {
       const result = await userCollection.find(query).toArray()
       res.send(result)
     })
+    app.get('/enrolledStudent', async (req, res) => {
+      const emails = req.query.emails
+        const query = { email: { $in: emails?.split(",") } };
+        const result = await userCollection.find(query).toArray()
+        res.send(result)
+      
+    })
     app.get('/courseOrder', async (req, res) => {
       const status = req.query.status
       const query = { status: status }
@@ -79,7 +93,7 @@ async function run() {
 
     app.get('/courseOrder/:email', async (req, res) => {
       const email = req.params.email;
-      const query = { studentEmail: email }
+      const query = { email: email }
       const result = await courseOrderCollection.find(query).toArray()
       res.send(result)
     })
@@ -131,6 +145,14 @@ async function run() {
       const query = { _id: new ObjectId(id) }
       const result = await courseCollection.deleteOne(query)
       res.send(result)
+    })
+
+    app.delete('/deleteOrder/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id :new ObjectId(id)}
+      const result = await courseOrderCollection.deleteOne(query)
+      res.send(result)
+      
     })
 
 
