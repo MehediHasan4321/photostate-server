@@ -1,15 +1,33 @@
 const express = require('express')
 const cors = require('cors')
 const port = process.env.PORT || 5000
+const jwt = require('jsonwebtoken')
 const app = express()
-
+require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_PAYMENTS_SECRECT)
 
 //Meddleware
 
 app.use(cors())
 app.use(express.json())
 
+const verifyJwtToken = (req, res, next) => {
+  const authorization = req.headers.authorization
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: 'unauthrize token' })
+  }
+  const token = authorization.split(" ")[1]
 
+  jwt.verify(token, process.env.JWT_ACCESS_TOKEN, (err, decoded) => {
+    if (err) {
+      console.log(err)
+      return res.status(403).send({ error: true, message: 'unauthrize token' })
+    }
+
+    req.decoded = decoded
+    next()
+  })
+}
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://photostat:FprzsuRcDBRS2bC2@cluster0.mzevrg2.mongodb.net/?retryWrites=true&w=majority`;
@@ -26,21 +44,32 @@ const client = new MongoClient(uri, {
 const userCollection = client.db('photostatDB').collection('usersDB')
 const courseCollection = client.db('photostatDB').collection('coursesDB')
 const courseOrderCollection = client.db('photostatDB').collection('courseOrders')
+const paymentCollection = client.db('photostatDB').collection('paymentsDB')
 
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-   // All Get Methods Are Here
-    
 
-    app.get('/users', async (req, res) => {
+    app.post('/jwt', (req, res) => {
+      const user = req.body
+      const token = jwt.sign(user, process.env.JWT_ACCESS_TOKEN, { expiresIn: '1h' })
+      res.send({ token })
+    })
+
+
+
+
+    // All Get Methods Are Here
+
+
+    app.get('/users', verifyJwtToken, async (req, res) => {
       const result = await userCollection.find().toArray()
       res.send(result)
     })
 
-    
+
     app.get('/courses', async (req, res) => {
       const result = await courseCollection.find().toArray()
       res.send(result)
@@ -52,17 +81,22 @@ async function run() {
       const result = await courseCollection.findOne(query)
       res.send(result)
     })
-
+    app.get('/coursesStatus/:status', async (req, res) => {
+      const status = req.params.status
+      const query = { status: status }
+      const result = await courseCollection.find(query).toArray()
+      res.send(result)
+    })
     app.get('/instractorCourse/:email', async (req, res) => {
       const email = req.params.email;
       const query = { email: email }
       const result = await courseCollection.find(query).toArray()
       res.send(result)
     })
-    app.get('/instractor/:email',async(req,res)=>{
+    app.get('/instractor/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email : email}
-      const result  = await userCollection.findOne(query)
+      const query = { email: email }
+      const result = await userCollection.findOne(query)
       res.send(result)
     })
     app.get('/user/role/:email', async (req, res) => {
@@ -79,10 +113,10 @@ async function run() {
     })
     app.get('/enrolledStudent', async (req, res) => {
       const emails = req.query.emails
-        const query = { email: { $in: emails?.split(",") } };
-        const result = await userCollection.find(query).toArray()
-        res.send(result)
-      
+      const query = { email: { $in: emails?.split(",") } };
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
+
     })
     app.get('/courseOrder', async (req, res) => {
       const status = req.query.status
@@ -93,7 +127,19 @@ async function run() {
 
     app.get('/courseOrder/:email', async (req, res) => {
       const email = req.params.email;
+      const status = req.query.status
       const query = { email: email }
+      const result = await courseOrderCollection.find(query).toArray()
+      const filterResult = result.filter(item => item.orderStatus === status)
+      if (status) {
+        res.send(filterResult)
+      } else {
+        res.send(result)
+      }
+    })
+    app.get('/orderStatus/:status', async (req, res) => {
+      const status = req.params.status
+      const query = { status: status }
       const result = await courseOrderCollection.find(query).toArray()
       res.send(result)
     })
@@ -136,8 +182,38 @@ async function run() {
       }
       const result = await courseCollection.updateOne(query, updateCourse, options)
       res.send(result)
+
+    })
+    app.put('/updateOrder/:id', async (req, res) => {
+      const id = req.params.id
+      const order = req.body;
+      const query = { courseId: id }
+      const options = { upsert: true };
+      const updateOrder = {
+        $set: order
+      }
+
+      const result = await courseOrderCollection.updateOne(query, updateOrder, options)
+      res.send(result)
     })
 
+
+    app.post("/create-payment-intent", verifyJwtToken, async (req, res) => {
+      const { price } = req.body
+      const payable = parseInt(price * 100)
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: payable,
+        currency: "usd",
+        payment_method_types: ['card'],
+      })
+      res.send({ clientSecret: paymentIntent.client_secret })
+    })
+
+    app.post('/payment', async (req, res) => {
+      const history = req.body
+      const result = await paymentCollection.insertOne(history)
+      res.send(result)
+    })
     //All DELETE Methods Are Here
 
     app.delete('/courses/:id', async (req, res) => {
@@ -147,12 +223,12 @@ async function run() {
       res.send(result)
     })
 
-    app.delete('/deleteOrder/:id',async(req,res)=>{
+    app.delete('/deleteOrder/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id :new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
       const result = await courseOrderCollection.deleteOne(query)
       res.send(result)
-      
+
     })
 
 
