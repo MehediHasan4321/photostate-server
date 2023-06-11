@@ -17,6 +17,7 @@ const verifyJwtToken = (req, res, next) => {
     return res.status(401).send({ error: true, message: 'unauthrize token' })
   }
   const token = authorization.split(" ")[1]
+ 
 
   jwt.verify(token, process.env.JWT_ACCESS_TOKEN, (err, decoded) => {
     if (err) {
@@ -111,21 +112,21 @@ async function run() {
       const result = await userCollection.find(query).toArray()
       res.send(result)
     })
-    app.get('/enrolledStudent', async (req, res) => {
+    app.get('/enrolledStudent',verifyJwtToken, async (req, res) => {
       const emails = req.query.emails
       const query = { email: { $in: emails?.split(",") } };
       const result = await userCollection.find(query).toArray()
       res.send(result)
 
     })
-    app.get('/courseOrder', async (req, res) => {
+    app.get('/courseOrder',verifyJwtToken, async (req, res) => {
       const status = req.query.status
       const query = { status: status }
       const result = await courseOrderCollection.find().toArray()
       res.send(result)
     })
 
-    app.get('/courseOrder/:email', async (req, res) => {
+    app.get('/courseOrder/:email',verifyJwtToken, async (req, res) => {
       const email = req.params.email;
       const status = req.query.status
       const query = { email: email }
@@ -137,12 +138,27 @@ async function run() {
         res.send(result)
       }
     })
-    app.get('/orderStatus/:status', async (req, res) => {
-      const status = req.params.status
-      const query = { status: status }
-      const result = await courseOrderCollection.find(query).toArray()
+
+    app.get('/courseOrderById/:id',verifyJwtToken, async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await courseOrderCollection.findOne(query)
       res.send(result)
     })
+
+
+    app.get('/allPayments',verifyJwtToken, async (req, res) => {
+      const email = req.query.email
+      const resutl = await paymentCollection.find().sort({ data: -1 }).toArray()
+      const filterResult = resutl.filter(item => item.studentEmail === email)
+      if (email) {
+        res.send(filterResult)
+      } else {
+        res.send(resutl)
+      }
+
+    })
+
     //All Post Methods Are Here
 
     app.post('/courses', async (req, res) => {
@@ -174,11 +190,11 @@ async function run() {
 
     app.put('/courses/:id', async (req, res) => {
       const id = req.params.id
-      const course = req.body;
+      const update = req.body;
       const query = { _id: new ObjectId(id) }
       const options = { upsert: true };
       const updateCourse = {
-        $set: course
+        $set: update
       }
       const result = await courseCollection.updateOne(query, updateCourse, options)
       res.send(result)
@@ -186,17 +202,25 @@ async function run() {
     })
     app.put('/updateOrder/:id', async (req, res) => {
       const id = req.params.id
-      const order = req.body;
-      const query = { courseId: id }
-      const options = { upsert: true };
-      const updateOrder = {
-        $set: order
+      const update = req.body;
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const updateDoc = {
+        $set: update
       }
-
-      const result = await courseOrderCollection.updateOne(query, updateOrder, options)
+      const result = await courseOrderCollection.updateOne(query, updateDoc, options)
       res.send(result)
     })
 
+    app.put('/updateUserRole/:email', async (req, res) => {
+      const email = req.params.email;
+      const role = req.body
+      const query = { email: email }
+      const options = { update: true }
+      const update = { $set: { role } }
+      const result = await userCollection.updateOne(query, update, options)
+      res.send(result)
+    })
 
     app.post("/create-payment-intent", verifyJwtToken, async (req, res) => {
       const { price } = req.body
