@@ -92,7 +92,8 @@ async function run() {
       const email = req.params.email;
       const query = { email: email }
       const result = await courseCollection.find(query).toArray()
-      res.send(result)
+      const aprove = result.filter(item=>item.status === 'aprove')
+      res.send(aprove)
     })
     app.get('/instractor/:email', async (req, res) => {
       const email = req.params.email;
@@ -253,6 +254,13 @@ async function run() {
       const result = await courseOrderCollection.deleteOne(query)
       res.send(result)
 
+    })
+
+    app.delete('/paymentHistory/:id', async(req,res)=>{
+      const id = req.params.id
+      const query = {_id:new ObjectId(id)}
+      const result = await paymentCollection.deleteOne(query)
+      res.send(result)
     })
 
 
