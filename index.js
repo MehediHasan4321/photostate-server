@@ -46,7 +46,7 @@ const userCollection = client.db('photostatDB').collection('usersDB')
 const courseCollection = client.db('photostatDB').collection('coursesDB')
 const courseOrderCollection = client.db('photostatDB').collection('courseOrders')
 const paymentCollection = client.db('photostatDB').collection('paymentsDB')
-
+const bannerCollection = client.db('photostatDB').collection('bannerDB')
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -89,11 +89,16 @@ async function run() {
       res.send(result)
     })
     app.get('/instractorCourse/:email', async (req, res) => {
+      const status = req.query.status
       const email = req.params.email;
       const query = { email: email }
       const result = await courseCollection.find(query).toArray()
-      const aprove = result.filter(item=>item.status === 'aprove')
-      res.send(aprove)
+      if(status){
+        const aprove = result.filter(item=>item.status === status)
+        res.send (aprove)
+        return
+      }
+      res.send(result)
     })
     app.get('/instractor/:email', async (req, res) => {
       const email = req.params.email;
@@ -134,10 +139,13 @@ async function run() {
       const result = await courseOrderCollection.find(query).toArray()
       const filterResult = result.filter(item => item.orderStatus === status)
       if (status) {
+        
         res.send(filterResult)
+        return
       } else {
         res.send(result)
       }
+      
     })
 
     app.get('/courseOrderById/:id',verifyJwtToken, async (req, res) => {
@@ -146,6 +154,12 @@ async function run() {
       const result = await courseOrderCollection.findOne(query)
       res.send(result)
     })
+
+    app.get('/allBanner',async(req,res)=>{
+      const result = await bannerCollection.find().toArray()
+      res.send(result)
+    })
+
 
 
     app.get('/allPayments',verifyJwtToken, async (req, res) => {
@@ -157,8 +171,16 @@ async function run() {
       } else {
         res.send(resutl)
       }
+    })
+
+    app.get('/instractor/payments/:email',async(req,res)=>{
+      const instractorEmail = req.params.email
+      const result = await paymentCollection.find().sort({data : -1}).toArray()
+      const finalResult = result.filter(item=>item.instractor.email === instractorEmail)
+      res.send(finalResult)
 
     })
+
 
     //All Post Methods Are Here
 
